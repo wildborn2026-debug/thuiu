@@ -29,7 +29,6 @@ async def start():
             api_id=config.API_ID,
             api_hash=config.API_HASH,
             session_string=session,
-            in_memory=True,
         )
         await client.start()
         me = await client.get_me()
