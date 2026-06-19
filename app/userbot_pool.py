@@ -111,12 +111,12 @@ async def download_from_channel(msg_id: int) -> tuple[bytes, str] | None:
         msg = await client.get_messages(config.CHANNEL_ID, msg_id)
         if not msg or (not msg.audio and not msg.video):
             return None
-        buf = io.BytesIO()
-        await client.download_media(msg, file_name=buf)
-        buf.seek(0)
+        file_bytes = await client.download_media(msg, in_memory=True)
+        if not file_bytes:
+            return None
         media = msg.audio or msg.video
         mime = media.mime_type or ("audio/mpeg" if msg.audio else "video/mp4")
-        return buf.read(), mime
+        return bytes(file_bytes), mime
 
     async with _op_semaphore:
         return await _try_each_account(action, "download_from_channel")
