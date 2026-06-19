@@ -28,6 +28,7 @@ COLLECTION = _get("COLLECTION", "songs")
 
 # ─── Telegram Channel ────────────────────────────────────
 CHANNEL_ID = _get_int("CHANNEL_ID", 0)
+CHANNEL_USERNAME = _get("CHANNEL_USERNAME")
 
 # ─── Userbot accounts ────────────────────────────────────
 API_ID = _get_int("API_ID", 0)
