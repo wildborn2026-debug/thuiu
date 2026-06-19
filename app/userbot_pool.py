@@ -112,13 +112,22 @@ async def download_from_channel(msg_id: int) -> tuple[bytes, str] | None:
             logger.warning(f"download_from_channel: msg_id={msg_id} not found or has no media.")
             return None
         media = msg.audio or msg.video
-        file_bytes = await client.download_media(media.file_id, in_memory=True)
-        if not file_bytes:
-            logger.warning(f"download_from_channel: msg_id={msg_id} download_media returned empty.")
-            return None
-        result_bytes = bytes(file_bytes)
-        logger.info(f"download_from_channel: msg_id={msg_id} downloaded {len(result_bytes)} bytes.")
         mime = media.mime_type or ("audio/mpeg" if msg.audio else "video/mp4")
+
+        # download_media returns a BytesIO when in_memory=True —
+        # call .getvalue() BEFORE the session has any chance to close.
+        buf = await client.download_media(media.file_id, in_memory=True)
+        if buf is None:
+            logger.warning(f"download_from_channel: msg_id={msg_id} download_media returned None.")
+            return None
+
+        result_bytes = buf.getvalue() if hasattr(buf, "getvalue") else bytes(buf)
+
+        if not result_bytes:
+            logger.warning(f"download_from_channel: msg_id={msg_id} empty bytes after extraction.")
+            return None
+
+        logger.info(f"download_from_channel: msg_id={msg_id} downloaded {len(result_bytes)} bytes.")
         return result_bytes, mime
 
     async with _op_semaphore:
