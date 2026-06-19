@@ -34,6 +34,30 @@ async def start():
         await client.start()
         me = await client.get_me()
         logger.info(f"Userbot {i} connected as @{me.username or me.id}")
+
+        # in_memory sessions start with an empty peer cache every time the
+        # process restarts, so resolve_peer(CHANNEL_ID) fails until the
+        # account "sees" the channel again. Force that resolution now.
+        try:
+            chat = await client.get_chat(config.CHANNEL_ID)
+            logger.info(f"Userbot {i}: channel peer resolved ({chat.title})")
+        except Exception as ex:
+            logger.warning(
+                f"Userbot {i}: could not resolve channel by ID ({ex}); "
+                f"trying CHANNEL_USERNAME fallback."
+            )
+            if config.CHANNEL_USERNAME:
+                try:
+                    chat = await client.join_chat(config.CHANNEL_USERNAME)
+                except Exception:
+                    chat = await client.get_chat(config.CHANNEL_USERNAME)
+                logger.info(f"Userbot {i}: channel peer resolved via username ({chat.title})")
+            else:
+                logger.error(
+                    f"Userbot {i}: channel peer NOT resolved. Set CHANNEL_USERNAME "
+                    f"in .env so this can self-heal on every restart."
+                )
+
         _clients.append(client)
 
     if not _clients:
