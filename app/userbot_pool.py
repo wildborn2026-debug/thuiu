@@ -6,6 +6,7 @@ import random
 
 from pyrogram import Client
 from pyrogram.errors import FloodWait
+from pathlib import Path
 from pyrogram.storage import FileStorage
 
 from app import config
@@ -27,7 +28,7 @@ async def _session_string_to_file(session_string: str, session_path: str, api_id
     )
     await temp.start()
     mem = temp.storage
-    file_storage = FileStorage(name=os.path.basename(session_path), workdir=SESSIONS_DIR)
+    file_storage = FileStorage(name=os.path.basename(session_path), workdir=Path(SESSIONS_DIR))
     await file_storage.open()
     await file_storage.dc_id(await mem.dc_id())
     await file_storage.api_id(await mem.api_id())
