@@ -50,6 +50,7 @@ async def start():
                 session_string=session,
             )
             await temp.start()
+            await temp.storage.save()
             await temp.stop()
             logger.info(f"Userbot {i}: session file created at {session_file}")
 
