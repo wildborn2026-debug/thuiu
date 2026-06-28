@@ -14,7 +14,7 @@ logger = logging.getLogger("userbot_pool")
 _clients: list[Client] = []
 _op_semaphore: asyncio.Semaphore | None = None
 
-SESSIONS_DIR = "sessions"
+SESSIONS_DIR = os.path.abspath("sessions")
 
 
 async def _reconnect(client: Client, index: int):
@@ -35,11 +35,13 @@ async def start():
     _op_semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_OPS)
 
     os.makedirs(SESSIONS_DIR, exist_ok=True)
+    logger.info(f"Sessions directory: {SESSIONS_DIR}")
 
     for i, session in enumerate(config.SESSION_STRINGS, start=1):
         session_path = os.path.join(SESSIONS_DIR, f"userbot_{i}")
+        session_file = f"{session_path}.session"
 
-        if not os.path.exists(f"{session_path}.session"):
+        if not os.path.exists(session_file):
             logger.info(f"Userbot {i}: no disk session found, creating from session_string...")
             temp = Client(
                 name=session_path,
@@ -49,7 +51,11 @@ async def start():
             )
             await temp.start()
             await temp.stop()
-            logger.info(f"Userbot {i}: session file created at {session_path}.session")
+            logger.info(f"Userbot {i}: session file created at {session_file}")
+
+        if not os.path.exists(session_file):
+            logger.error(f"Userbot {i}: session file still missing after creation, skipping.")
+            continue
 
         client = Client(
             name=session_path,
