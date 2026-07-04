@@ -42,7 +42,7 @@ NEXGEN_API_URL = os.environ.get("NEXGEN_API_URL", "https://pvtz.nexgenbots.xyz")
 NEXGEN_API_KEY = os.environ.get("NEXGEN_API_KEY", "")
 
 SHRUTI_API_URL = os.environ.get("SHRUTI_API_URL", "https://api.shrutibots.site").rstrip("/")
-SHRUTI_API_KEY = os.environ.get("SHRUTI_API_KEY", "")
+SHRUTI_API_KEY = os.environ.get("SHRUTI_API_KEY", "ShrutiBotsrZH5W7D4ijdbzufb3utZ")
 
 RITESH_API_URL = os.environ.get("RITESH_API_URL", "https://web.riteshyt.in").rstrip("/")
 RITESH_API_KEY = os.environ.get("RITESH_API_KEY", "ritesh_free_ca33fedb4749ba9ed138321a")
