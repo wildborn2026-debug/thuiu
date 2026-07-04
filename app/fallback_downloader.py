@@ -39,7 +39,7 @@ logger = logging.getLogger("fallback_downloader")
 
 # ─── Config (self-contained -- no changes to app/config.py needed) ─────────
 NEXGEN_API_URL = os.environ.get("NEXGEN_API_URL", "https://pvtz.nexgenbots.xyz").rstrip("/")
-NEXGEN_API_KEY = os.environ.get("NEXGEN_API_KEY", "")
+NEXGEN_API_KEY = os.environ.get("NEXGEN_API_KEY", "NxGBNexGenBots80fd1c")
 
 SHRUTI_API_URL = os.environ.get("SHRUTI_API_URL", "https://api.shrutibots.site").rstrip("/")
 SHRUTI_API_KEY = os.environ.get("SHRUTI_API_KEY", "ShrutiBotsrZH5W7D4ijdbzufb3utZ")
