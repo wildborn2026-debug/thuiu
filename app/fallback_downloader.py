@@ -1,30 +1,3 @@
-"""
-fallback_downloader.py
-
-Runs inside the same FastAPI process as the rest of the Music Cache API.
-Whenever song_service.py can't find a video in MongoDB, it calls enqueue()
-here instead of just failing. A single background worker then tries external
-YouTube-download APIs for that video, one at a time, in order:
-
-    1. NexGen
-    2. Shruti
-    3. Ritesh
-
-(Devil is deliberately not in this chain -- Devil IS this Music Cache API,
-so it can't be its own fallback.)
-
-On success the file is saved as DOWNLOAD_DIR/<video_id>.mp3 (audio) or
-DOWNLOAD_DIR/<video_id>.mp4 (video) -- the exact naming migrate.py already
-expects, so nothing else needs to change for the daily manual migration to
-pick it up.
-
-This module never touches MongoDB or the Telegram channel. That stays
-migrate.py's job.
-
-To add another provider later: write a `_try_<name>(session, video_id,
-media_type, file_path, timeout_sec) -> bool` function following the same
-shape as the ones below, and add it to _PROVIDERS.
-"""
 import asyncio
 import logging
 import os
@@ -37,7 +10,6 @@ load_dotenv()
 
 logger = logging.getLogger("fallback_downloader")
 
-# ─── Config (self-contained -- no changes to app/config.py needed) ─────────
 NEXGEN_API_URL = os.environ.get("NEXGEN_API_URL", "https://pvtz.nexgenbots.xyz").rstrip("/")
 NEXGEN_API_KEY = os.environ.get("NEXGEN_API_KEY", "NxGBNexGenBots80fd1c")
 
@@ -72,7 +44,6 @@ def _already_downloaded(video_id: str, media_type: str) -> bool:
 
 
 async def _try_nexgen(session: aiohttp.ClientSession, video_id: str, media_type: str, file_path: Path, timeout_sec: int) -> bool:
-    """Status-poll then stream-download, matching the existing bot's nexgen flow."""
     if not (NEXGEN_API_URL and NEXGEN_API_KEY):
         return False
 
@@ -111,7 +82,6 @@ async def _try_nexgen(session: aiohttp.ClientSession, video_id: str, media_type:
 
 
 async def _try_shruti(session: aiohttp.ClientSession, video_id: str, media_type: str, file_path: Path, timeout_sec: int) -> bool:
-    """Single GET, stream straight to disk -- matches the existing bot's shruti flow."""
     if not (SHRUTI_API_URL and SHRUTI_API_KEY):
         return False
 
@@ -137,7 +107,6 @@ async def _try_shruti(session: aiohttp.ClientSession, video_id: str, media_type:
 
 
 async def _try_ritesh(session: aiohttp.ClientSession, video_id: str, media_type: str, file_path: Path, timeout_sec: int) -> bool:
-    """Single GET to a path-based URL, stream straight to disk -- matches the existing bot's ritesh flow."""
     if not (RITESH_API_URL and RITESH_API_KEY):
         return False
 
@@ -161,8 +130,6 @@ async def _try_ritesh(session: aiohttp.ClientSession, video_id: str, media_type:
         return False
 
 
-# Tried in this order for every job. Append another (name, function) pair
-# here to plug in a 4th provider -- nothing else in this file needs to change.
 _PROVIDERS = [
     ("nexgen", _try_nexgen),
     ("shruti", _try_shruti),
@@ -177,17 +144,19 @@ async def _download_one(video_id: str, media_type: str):
 
     Path(DOWNLOAD_DIR).mkdir(parents=True, exist_ok=True)
     file_path = _file_path(video_id, media_type)
+    tmp_path = Path(f"{file_path}.part")
     timeout_sec = VIDEO_TIMEOUT if media_type == "video" else AUDIO_TIMEOUT
 
     async with aiohttp.ClientSession() as session:
         for name, provider in _PROVIDERS:
-            ok = await provider(session, video_id, media_type, file_path, timeout_sec)
+            ok = await provider(session, video_id, media_type, tmp_path, timeout_sec)
             if ok:
+                os.replace(tmp_path, file_path)
                 logger.info(f"{video_id}: downloaded via {name} -> {file_path.name}")
                 return
 
-    if file_path.exists():
-        file_path.unlink(missing_ok=True)
+    if tmp_path.exists():
+        tmp_path.unlink(missing_ok=True)
     logger.warning(f"{video_id}: all fallback apis failed, skipping")
 
 
@@ -204,12 +173,6 @@ async def _worker():
 
 
 def enqueue(video_id: str, video: bool):
-    """
-    Non-blocking -- call this from song_service.py the moment a video isn't
-    found in Mongo. Safe to call repeatedly for the same video: duplicates
-    are dropped if already queued/downloading, or already sitting on disk
-    from an earlier request today.
-    """
     media_type = "video" if video else "audio"
     key = (video_id, media_type)
 
