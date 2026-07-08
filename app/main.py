@@ -8,7 +8,7 @@ import logging
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import Response
 
-from app import config, database, fallback_downloader, song_service, userbot_pool
+from app import config, database, fallback_downloader, local_cache, song_service, userbot_pool
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
@@ -23,6 +23,7 @@ async def startup():
     database.connect()
     await userbot_pool.start()
     await fallback_downloader.start()
+    await local_cache.start()
     logger.info("API ready.")
 
 
