@@ -1,7 +1,7 @@
 import logging
 import time
 
-from app import database, fallback_downloader, userbot_pool
+from app import database, fallback_downloader, local_cache, userbot_pool
 
 logger = logging.getLogger("song_service")
 
@@ -17,6 +17,12 @@ class SongFetchFailed(Exception):
 async def get_song(video_id: str, video: bool = False) -> tuple[bytes, str]:
     field = "v" if video else "a"
     started = time.monotonic()
+
+    cached = await local_cache.get(video_id, video)
+    if cached:
+        elapsed = time.monotonic() - started
+        logger.info(f"{video_id}: served from local cache ({elapsed:.2f}s)")
+        return cached
 
     doc = await database.get_song(video_id)
 
@@ -44,6 +50,7 @@ async def get_song(video_id: str, video: bool = False) -> tuple[bytes, str]:
 
     if result:
         logger.info(f"{video_id}: served from channel cache (msg_id={msg_id}) ({elapsed:.2f}s)")
+        await local_cache.put(video_id, video, result[0])
         return result
 
     logger.warning(f"{video_id}: cached msg_id {msg_id} could not be fetched ({elapsed:.2f}s)")
